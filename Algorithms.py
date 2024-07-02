@@ -5,23 +5,24 @@ import heapdict
 from CampusEnv import CampusEnv
 
 class Node:
-    def __init__(self, state=0, parent=None, cost=1):
+    def __init__(self, state=0, parent=None, cost=0):
         self.state = state
         self.parent = parent
         self.cost = cost
 
     @staticmethod
-    def make_node(state: int, parent=None, cost: float = 1):
+    def make_node(state: int, parent=None, cost: float = 0):
         return Node(state, parent, cost)
     
     def __eq__(self, other):
         return isinstance(other, Node) and self.state == other.state
     
     def __repr__(self) -> str:
-        return f"Node(state={self.state}, parent={self.parent}, cost={self.cost})"
+         return f"Node({self.state}, cost={self.cost})"
+        # return f"Node(state={self.state}, parent={self.parent}, cost={self.cost})"
     
     def __str__(self) -> str:
-        return f"Node({self.state}, , cost={self.cost})"
+        return f"Node({self.state}, cost={self.cost})"
     
     def __eq__(self, other):
         if not isinstance(other, Node):
@@ -78,23 +79,20 @@ class Agent:
         self.initialize_search(env)
         while self.open_list:
             state, node = self.open_list.popitem()
-            self.close_list.append(node.state)
+            self.close_list.append(node.state)  
 
             if env.is_final_state(state):
                 actions, final_cost, expended =  Utility.solution(node, self.expended)
                 final_cost = node.cost
                 return actions, final_cost, expended
 
-            
             self.expended += 1
             for action, (new_state, cost, terminated) in env.succ(state).items():
                 new_cost = node.cost + cost
                 child_node = Node.make_node(new_state, node, new_cost)
-                if child_node.state is 27:
-                    print(str(child_node))
-                if child_node.state not in self.close_list and child_node not in self.open_list.values():
+                if child_node.state not in self.close_list and child_node.state not in self.open_list.keys():
                     self.open_list[new_state] = child_node
-                elif child_node in self.open_list.values():
+                elif child_node.state in self.open_list.keys():
                     if new_cost < self.open_list[new_state].cost:
                         self.open_list[new_state] = child_node
         return ([], 0.0, 0)
@@ -132,9 +130,6 @@ class DFSGAgent(Agent):
 class UCSAgent(Agent):
     def __init__(self) -> None:
         super().__init__()
-
-    def pop_from_open_list(self):
-        return self.open_list.popitem()
 
 # class WeightedAStarAgent(Agent):
 #     def __init__(self):
