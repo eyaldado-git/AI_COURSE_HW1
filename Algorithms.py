@@ -59,19 +59,19 @@ class Utility:
         actions.reverse()  # Reverse actions to get them in the correct order
         return actions, cost, expended
 
-class campusHeuristic():
+class CampusHeuristic:
     def __init__(self, state: Node, goal_states: List[Node], portal_cost: float):
         self.state = state
         self.goal_states = goal_states
         self.portal_cost = portal_cost
 
-    def get_heuristic_value(state):
+    def get_heuristic_value(self) -> float:
         possible_heuristic_values = [self.portal_cost]
-        state_row, state_col = CampusEnv.to_row_col(state)
+        state_row, state_col = CampusEnv.to_row_col(self.state)
         for g in self.goal_states:
             goal_row, goal_col = CampusEnv.to_row_col(g)
-            manhatan_distance = abs(goal_row - state_row) + abs(goal_col - state_col)
-            possible_heuristic_values.append(manhatan_distance)
+            manhattan_distance = abs(goal_row - state_row) + abs(goal_col - state_col)
+            possible_heuristic_values.append(manhattan_distance)
         return min(possible_heuristic_values)
     
 
