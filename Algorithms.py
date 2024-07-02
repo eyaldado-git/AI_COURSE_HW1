@@ -59,6 +59,23 @@ class Utility:
         actions.reverse()  # Reverse actions to get them in the correct order
         return actions, cost, expended
 
+class campusHeuristic():
+    def __init__(self, state: Node, goal_states: List[Node], portal_cost: float):
+        self.state = state
+        self.goal_states = goal_states
+        self.portal_cost = portal_cost
+
+    def get_heuristic_value(state):
+        possible_heuristic_values = [self.portal_cost]
+        state_row, state_col = CampusEnv.to_row_col(state)
+        for g in self.goal_states:
+            goal_row, goal_col = CampusEnv.to_row_col(g)
+            manhatan_distance = abs(goal_row - state_row) + abs(goal_col - state_col)
+            possible_heuristic_values.append(manhatan_distance)
+        return min(possible_heuristic_values)
+    
+
+
 class Agent:
     def __init__(self):
         self.actions = []
@@ -125,19 +142,19 @@ class DFSGAgent(Agent):
                 else:
                     self.expended += 1 # add the holes to the expended states counter
         
-        return 
+        return ([], 0.0, 0)
 
 class UCSAgent(Agent):
     def __init__(self) -> None:
         super().__init__()
 
-# class WeightedAStarAgent(Agent):
-#     def __init__(self):
-#         super().__init__()
+class WeightedAStarAgent(Agent):
+    def __init__(self):
+        super().__init__()
 
-#     def search(self, env: CampusEnv, open_list: List[Node], close_list: List[Node], h_weight: float) -> Tuple[List[int], float, int]:
-#         # Implement Weighted A* search logic here
-#         pass
+    def search(self, env: CampusEnv, h_weight: float) -> Tuple[List[int], float, int]:
+        # Implement Weighted A* search logic here
+        pass
 
 
 # class AStarAgent(Agent):
