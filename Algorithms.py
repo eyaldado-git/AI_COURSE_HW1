@@ -5,14 +5,15 @@ import heapdict
 from CampusEnv import CampusEnv
 
 class Node:
-    def __init__(self, state=0, parent=None, cost=0):
+    def __init__(self, state=0, parent=None, cost=0, heuristic = 0):
         self.state = state
         self.parent = parent
         self.cost = cost
+        self.heuristic = heuristic
 
     @staticmethod
-    def make_node(state: int, parent=None, cost: float = 0):
-        return Node(state, parent, cost)
+    def make_node(state: int, parent=None, cost: float = 0, heuristic = 0):
+        return Node(state, parent, cost, heuristic)
     
     def __eq__(self, other):
         return isinstance(other, Node) and self.state == other.state
@@ -60,16 +61,15 @@ class Utility:
         return actions, cost, expended
 
 class CampusHeuristic:
-    def __init__(self, state: Node, goal_states: List[Node], portal_cost: float):
-        self.state = state
-        self.goal_states = goal_states
+    def __init__(self, env: CampusEnv, portal_cost: float):
+        self.env = env
         self.portal_cost = portal_cost
 
-    def get_heuristic_value(self) -> float:
+    def get_heuristic_value(self, state: int) -> float:
         possible_heuristic_values = [self.portal_cost]
-        state_row, state_col = CampusEnv.to_row_col(self.state)
-        for g in self.goal_states:
-            goal_row, goal_col = CampusEnv.to_row_col(g)
+        state_row, state_col = self.env.to_row_col(state)
+        for goal_state in self.env.get_goal_states():
+            goal_row, goal_col = self.env.to_row_col(goal_state)
             manhattan_distance = abs(goal_row - state_row) + abs(goal_col - state_col)
             possible_heuristic_values.append(manhattan_distance)
         return min(possible_heuristic_values)
@@ -81,39 +81,6 @@ class Agent:
         self.actions = []
         self.cost = 0.0
         self.expended = 0
-        self.open_list = heapdict.heapdict() 
-        self.close_list = []
-
-    def pop_from_open_list(self):
-        return self.open_list.peekitem()
-    
-    def initialize_search(self, env: CampusEnv) -> None:
-        init_node = Node.make_node(env.get_initial_state())
-        self.open_list[init_node.state] = init_node
-        self.close_list = []
-
-    def search(self, env) -> Tuple[List[int], float, int]:
-        self.initialize_search(env)
-        while self.open_list:
-            state, node = self.open_list.popitem()
-            self.close_list.append(node.state)  
-
-            if env.is_final_state(state):
-                actions, final_cost, expended =  Utility.solution(node, self.expended)
-                final_cost = node.cost
-                return actions, final_cost, expended
-
-            self.expended += 1
-            for action, (new_state, cost, terminated) in env.succ(state).items():
-                new_cost = node.cost + cost
-                child_node = Node.make_node(new_state, node, new_cost)
-                if child_node.state not in self.close_list and child_node.state not in self.open_list.keys():
-                    self.open_list[new_state] = child_node
-                elif child_node.state in self.open_list.keys():
-                    if new_cost < self.open_list[new_state].cost:
-                        self.open_list[new_state] = child_node
-        return ([], 0.0, 0)
-
 
 class DFSGAgent(Agent):
     def __init__(self):
@@ -147,14 +114,74 @@ class DFSGAgent(Agent):
 class UCSAgent(Agent):
     def __init__(self) -> None:
         super().__init__()
+        self.open_list = heapdict.heapdict() 
+        self.close_list = []
+    
+    def search(self, env) -> Tuple[List[int], float, int]:
+        init_node = Node.make_node(env.get_initial_state())
+        self.open_list[init_node.state] = init_node
+        self.close_list = []
+        while self.open_list:
+            state, node = self.open_list.popitem()
+            self.close_list.append(node.state)  
+
+            if env.is_final_state(state):
+                actions, final_cost, expended =  Utility.solution(node, self.expended)
+                final_cost = node.cost
+                return actions, final_cost, expended
+
+            self.expended += 1
+            for action, (new_state, cost, terminated) in env.succ(state).items():
+                new_cost = node.cost + cost
+                child_node = Node.make_node(new_state, node, new_cost)
+                if child_node.state not in self.close_list and child_node.state not in self.open_list.keys():
+                    self.open_list[new_state] = child_node
+                elif child_node.state in self.open_list.keys():
+                    if new_cost < self.open_list[new_state].cost:
+                        self.open_list[new_state] = child_node
+        return ([], 0.0, 0)
+
 
 class WeightedAStarAgent(Agent):
     def __init__(self):
         super().__init__()
+        self.open_list = heapdict.heapdict() 
+        self.close_list = heapdict.heapdict()
 
     def search(self, env: CampusEnv, h_weight: float) -> Tuple[List[int], float, int]:
-        # Implement Weighted A* search logic here
-        pass
+        heuristic = CampusHeuristic(env, 100)
+        init_state = env.get_initial_state()
+        init_node = Node.make_node(init_state, None, 0, heuristic.get_heuristic_value(init_state))
+        self.open_list[init_state] = init_node
+        while self.open_list:
+            state, node = self.open_list.popitem()
+            self.close_list[state] = node  
+
+            if env.is_final_state(state):
+                actions, final_cost, expended =  Utility.solution(node, self.expended)
+                final_cost = node.cost
+                return actions, final_cost, expended
+
+            self.expended += 1
+            for action, (child_state, cost, terminated) in env.succ(state).items():
+                total_cost = node.cost + cost
+                child_heuristic = heuristic.get_heuristic_value(child_state)
+                f_child = (1 - h_weight) * total_cost + h_weight * child_heuristic
+                if child_state not in self.close_list.keys() and child_state not in self.open_list.keys():
+                    child_node = Node.make_node(child_state, node, total_cost, child_heuristic)
+                    self.open_list[child_state] = child_node
+                elif child_state in self.open_list.keys():
+                    curr_node = self.open_list[child_state]
+                    f_curr_node = (1 - h_weight) * curr_node.cost + h_weight * curr_node.heuristic
+                    if f_child < f_curr_node:
+                        self.open_list[child_state] = child_node
+                else:
+                    curr_node = self.close_list[child_state]
+                    f_curr_node = (1 - h_weight) * curr_node.cost + h_weight * curr_node.heuristic
+                    if f_child < f_curr_node:
+                        self.open_list[child_state] = child_node
+                        self.close_list.pop(child_state)
+        return ([], 0.0, 0)
 
 
 # class AStarAgent(Agent):
@@ -192,13 +219,21 @@ if __name__ == "__main__":
     print(f"Total_cost: {total_cost}")
     print(f"Expanded: {expanded}")
     print(f"Actions: {actions}")
-
     print()
 
     UCS_agent = UCSAgent()
-    print("UCS\n")
+    print("UCS")
     actions, total_cost, expanded = UCS_agent.search(env)
     print(f"Total_cost: {total_cost}")
     print(f"Expanded: {expanded}")
-    print(f"Actions: {actions}")  # i have error in the optimal path, should be 98 and i got 101
+    print(f"Actions: {actions}")
+    print()
+
+    WAstar_agent = WeightedAStarAgent()
+    print("WeightedAStarAgent")
+    actions, total_cost, expanded = WAstar_agent.search(env, h_weight=0.7)
+    print(f"Total_cost: {total_cost}")
+    print(f"Expanded: {expanded}")
+    print(f"Actions: {actions}")
+    print()
 
