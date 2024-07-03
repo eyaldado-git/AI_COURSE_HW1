@@ -228,7 +228,7 @@ if __name__ == "__main__":
 
     WAstar_agent = WeightedAStarAgent()
     print("WeightedAStarAgent")
-    actions, total_cost, expanded = WAstar_agent.search(env, h_weight=1)
+    actions, total_cost, expanded = WAstar_agent.search(env, h_weight=0.7)
     print(f"Total_cost: {total_cost}")
     print(f"Expanded: {expanded}")
     print(f"Actions: {actions}")
