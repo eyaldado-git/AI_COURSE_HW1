@@ -182,13 +182,13 @@ class WeightedAStarAgent(Agent):
         return ([], 0.0, 0)
 
 
-# class AStarAgent(Agent):
-#     def __init__(self):
-#         super().__init__()
+class AStarAgent(WeightedAStarAgent):
+    def __init__(self):
+        super().__init__()
 
-#     def search(self, env: CampusEnv, open_list: List[Node], close_list: List[Node]) -> Tuple[List[int], float, int]:
-#         # Implement A* search logic here
-#         pass
+    def search(self, env: CampusEnv) -> Tuple[List[int], float, int]:
+        actions, final_cost, expended = super().search(env, 0.5)
+        return actions, 2 * final_cost, expended
 
 if __name__ == "__main__":
     MAPS = {
@@ -230,6 +230,14 @@ if __name__ == "__main__":
     WAstar_agent = WeightedAStarAgent()
     print("WeightedAStarAgent")
     actions, total_cost, expanded = WAstar_agent.search(env, h_weight=1)
+    print(f"Total_cost: {total_cost}")
+    print(f"Expanded: {expanded}")
+    print(f"Actions: {actions}")
+    print()
+
+    WAstar_agent = AStarAgent()
+    print("AStarAgent")
+    actions, total_cost, expanded = WAstar_agent.search(env)
     print(f"Total_cost: {total_cost}")
     print(f"Expanded: {expanded}")
     print(f"Actions: {actions}")
