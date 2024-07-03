@@ -5,25 +5,26 @@ import heapdict
 from CampusEnv import CampusEnv
 
 class Node:
-    def __init__(self, state=0, parent=None, cost=0, heuristic = 0):
+    def __init__(self, state=0, parent=None, cost=0, heuristic = 0, h_weight = 0 ):
         self.state = state
         self.parent = parent
         self.cost = cost
         self.heuristic = heuristic
+        self.h_weight = h_weight
 
     @staticmethod
-    def make_node(state: int, parent=None, cost: float = 0, heuristic = 0):
-        return Node(state, parent, cost, heuristic)
+    def make_node(state: int, parent=None, cost: float = 0, heuristic = 0,  h_weight = 0 ):
+        return Node(state, parent, cost, heuristic, h_weight)
     
     def __eq__(self, other):
         return isinstance(other, Node) and self.state == other.state
     
     def __repr__(self) -> str:
-         return f"Node({self.state}, cost={self.cost})"
+        return f"Node({self.state},  {(1 - self.h_weight) * self.cost + self.h_weight * self.heuristic:.2f})"
         # return f"Node(state={self.state}, parent={self.parent}, cost={self.cost})"
     
     def __str__(self) -> str:
-        return f"Node({self.state}, cost={self.cost})"
+        return f"Node({self.state}, {(1 - self.h_weight) * self.cost + self.h_weight * self.heuristic:.2f})"
     
     def __eq__(self, other):
         if not isinstance(other, Node):
@@ -33,9 +34,9 @@ class Node:
     def __lt__(self, other):
         if not isinstance(other, Node):
             return NotImplemented
-        if self.cost == other.cost:
+        if (1 - self.h_weight) * self.cost + self.h_weight * self.heuristic == (1 - self.h_weight) * other.cost + self.h_weight * other.heuristic:
             return self.state < other.state
-        return self.cost < other.cost
+        return (1 - self.h_weight) * self.cost + self.h_weight * self.heuristic < (1 - self.h_weight) * other.cost + self.h_weight * other.heuristic
 
 class Utility:
     @staticmethod
@@ -73,8 +74,6 @@ class CampusHeuristic:
             manhattan_distance = abs(goal_row - state_row) + abs(goal_col - state_col)
             possible_heuristic_values.append(manhattan_distance)
         return min(possible_heuristic_values)
-    
-
 
 class Agent:
     def __init__(self):
@@ -151,10 +150,13 @@ class WeightedAStarAgent(Agent):
     def search(self, env: CampusEnv, h_weight: float) -> Tuple[List[int], float, int]:
         heuristic = CampusHeuristic(env, 100)
         init_state = env.get_initial_state()
-        init_node = Node.make_node(init_state, None, 0, heuristic.get_heuristic_value(init_state))
+        init_node = Node.make_node(init_state, None, 0, heuristic.get_heuristic_value(init_state), h_weight)
         self.open_list[init_state] = init_node
         while self.open_list:
+            # print('list of values in h:\n', list(self.open_list.values())) 
             state, node = self.open_list.popitem()
+            # print(node)
+            # print("________________________________________________________-")
             self.close_list[state] = node  
 
             if env.is_final_state(state):
@@ -163,24 +165,20 @@ class WeightedAStarAgent(Agent):
                 return actions, final_cost, expended
 
             self.expended += 1
-            for action, (child_state, cost, terminated) in env.succ(state).items():
-                total_cost = node.cost + cost
-                child_heuristic = heuristic.get_heuristic_value(child_state)
-                f_child = (1 - h_weight) * total_cost + h_weight * child_heuristic
-                if child_state not in self.close_list.keys() and child_state not in self.open_list.keys():
-                    child_node = Node.make_node(child_state, node, total_cost, child_heuristic)
-                    self.open_list[child_state] = child_node
-                elif child_state in self.open_list.keys():
-                    curr_node = self.open_list[child_state]
-                    f_curr_node = (1 - h_weight) * curr_node.cost + h_weight * curr_node.heuristic
-                    if f_child < f_curr_node:
+            if node.cost != np.inf: # avoid holes
+                for action, (child_state, cost, terminated) in env.succ(state).items():
+                    total_cost = node.cost + cost
+                    if child_state not in self.close_list.keys() and child_state not in self.open_list.keys():
+                        child_heuristic = heuristic.get_heuristic_value(child_state)
+                        child_node = Node.make_node(child_state, node, total_cost, child_heuristic, h_weight)
                         self.open_list[child_state] = child_node
-                else:
-                    curr_node = self.close_list[child_state]
-                    f_curr_node = (1 - h_weight) * curr_node.cost + h_weight * curr_node.heuristic
-                    if f_child < f_curr_node:
-                        self.open_list[child_state] = child_node
-                        self.close_list.pop(child_state)
+                    elif child_state in self.open_list.keys():
+                        if total_cost < self.open_list[child_state].cost:
+                            self.open_list[child_state] = child_node # check why never get in
+                    else:
+                        if total_cost < self.close_list[child_state].cost:
+                            self.open_list[child_state] = child_node  # check why never get in
+                            self.close_list.pop(child_state)
         return ([], 0.0, 0)
 
 
@@ -231,7 +229,7 @@ if __name__ == "__main__":
 
     WAstar_agent = WeightedAStarAgent()
     print("WeightedAStarAgent")
-    actions, total_cost, expanded = WAstar_agent.search(env, h_weight=0.7)
+    actions, total_cost, expanded = WAstar_agent.search(env, h_weight=1)
     print(f"Total_cost: {total_cost}")
     print(f"Expanded: {expanded}")
     print(f"Actions: {actions}")
