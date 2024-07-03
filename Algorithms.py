@@ -131,14 +131,15 @@ class UCSAgent(Agent):
                 return actions, final_cost, expended
 
             self.expended += 1
-            for action, (new_state, cost, terminated) in env.succ(state).items():
-                new_cost = node.cost + cost
-                child_node = Node.make_node(new_state, node, new_cost)
-                if child_node.state not in self.close_list and child_node.state not in self.open_list.keys():
-                    self.open_list[new_state] = child_node
-                elif child_node.state in self.open_list.keys():
-                    if new_cost < self.open_list[new_state].cost:
+            if node.cost != np.inf: # avoid holes
+                for action, (new_state, cost, terminated) in env.succ(state).items():
+                    new_cost = node.cost + cost
+                    child_node = Node.make_node(new_state, node, new_cost)
+                    if child_node.state not in self.close_list and child_node.state not in self.open_list.keys():
                         self.open_list[new_state] = child_node
+                    elif child_node.state in self.open_list.keys():
+                        if new_cost < self.open_list[new_state].cost:
+                            self.open_list[new_state] = child_node
         return self.failure
 
 
