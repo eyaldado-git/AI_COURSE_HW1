@@ -80,6 +80,7 @@ class Agent:
         self.actions = []
         self.cost = 0.0
         self.expended = 0
+        self.failure = ([], 0.0, 0)
 
 class DFSGAgent(Agent):
     def __init__(self):
@@ -108,7 +109,7 @@ class DFSGAgent(Agent):
                 else:
                     self.expended += 1 # add the holes to the expended states counter
         
-        return ([], 0.0, 0)
+        return self.failure
 
 class UCSAgent(Agent):
     def __init__(self) -> None:
@@ -138,7 +139,7 @@ class UCSAgent(Agent):
                 elif child_node.state in self.open_list.keys():
                     if new_cost < self.open_list[new_state].cost:
                         self.open_list[new_state] = child_node
-        return ([], 0.0, 0)
+        return self.failure
 
 
 class WeightedAStarAgent(Agent):
@@ -153,10 +154,7 @@ class WeightedAStarAgent(Agent):
         init_node = Node.make_node(init_state, None, 0, heuristic.get_heuristic_value(init_state), h_weight)
         self.open_list[init_state] = init_node
         while self.open_list:
-            # print('list of values in h:\n', list(self.open_list.values())) 
             state, node = self.open_list.popitem()
-            # print(node)
-            # print("________________________________________________________-")
             self.close_list[state] = node  
 
             if env.is_final_state(state):
@@ -179,7 +177,7 @@ class WeightedAStarAgent(Agent):
                         if total_cost < self.close_list[child_state].cost:
                             self.open_list[child_state] = child_node  # check why never get in
                             self.close_list.pop(child_state)
-        return ([], 0.0, 0)
+        return self.failure
 
 
 class AStarAgent(WeightedAStarAgent):
