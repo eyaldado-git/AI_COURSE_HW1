@@ -195,9 +195,6 @@ class UCSAgent(Agent):
             if node.is_hole:
                 continue
 
-            if state == 92:
-                print()
-
             for action, (new_state, cost, terminated) in env.succ(state).items():
                 if cost == None:
                     print(f"UCS({state})")
